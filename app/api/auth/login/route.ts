@@ -23,8 +23,8 @@ export async function POST(request: Request) {
     if (!email || !password) {
       return NextResponse.json(
         {
-          error:
-            "Email and password are required.",
+          success: false,
+          error: "Email and password are required.",
         },
         {
           status: 400,
@@ -33,13 +33,13 @@ export async function POST(request: Request) {
     }
 
     // ============================================================
-    // GET COOKIES
+    // COOKIES
     // ============================================================
 
     const cookieStore = await cookies();
 
     // ============================================================
-    // CREATE SUPABASE SERVER CLIENT
+    // SUPABASE SERVER CLIENT
     // ============================================================
 
     const supabase = createServerClient(
@@ -74,12 +74,20 @@ export async function POST(request: Request) {
     );
 
     // ============================================================
-    // SIGN IN
+    // TRY NORMAL LOGIN FIRST
+    // ============================================================
+    //
+    // If the email/password belongs to a real registered user,
+    // keep the normal authenticated account.
+    //
+    // If it does NOT belong to a registered user, we will create
+    // an anonymous guest session instead.
+    //
     // ============================================================
 
     const {
-      data,
-      error,
+      data: loginData,
+      error: loginError,
     } =
       await supabase.auth.signInWithPassword({
         email,
@@ -87,77 +95,140 @@ export async function POST(request: Request) {
       });
 
     // ============================================================
-    // LOGIN FAILED
+    // REAL USER LOGIN SUCCESS
     // ============================================================
 
-    if (error) {
+    if (
+      !loginError &&
+      loginData.user &&
+      loginData.session
+    ) {
+      return NextResponse.json(
+        {
+          success: true,
+          guest: false,
+
+          user: {
+            id: loginData.user.id,
+            email: loginData.user.email,
+            user_metadata:
+              loginData.user.user_metadata,
+          },
+
+          session: {
+            access_token:
+              loginData.session.access_token,
+
+            refresh_token:
+              loginData.session.refresh_token,
+
+            expires_at:
+              loginData.session.expires_at,
+
+            expires_in:
+              loginData.session.expires_in,
+
+            token_type:
+              loginData.session.token_type,
+          },
+        },
+        {
+          status: 200,
+        }
+      );
+    }
+
+    // ============================================================
+    // PASSWORD LOGIN FAILED
+    // ============================================================
+    //
+    // IMPORTANT:
+    //
+    // For the ticket checkout flow, an invalid/nonexistent
+    // email + password must NOT stop checkout.
+    //
+    // Instead we create a Supabase anonymous user.
+    //
+    // The email/password entered by the visitor is therefore
+    // only used to attempt normal authentication.
+    //
+    // It is NOT stored as a guest account password.
+    //
+    // ============================================================
+
+    console.log(
+      "Normal login failed. Creating anonymous guest checkout session."
+    );
+
+    // ============================================================
+    // CREATE ANONYMOUS SESSION
+    // ============================================================
+
+    const {
+      data: anonymousData,
+      error: anonymousError,
+    } =
+      await supabase.auth.signInAnonymously();
+
+    // ============================================================
+    // ANONYMOUS LOGIN FAILED
+    // ============================================================
+
+    if (
+      anonymousError ||
+      !anonymousData.user ||
+      !anonymousData.session
+    ) {
       console.error(
-        "Supabase login error:",
-        error.message
+        "Anonymous authentication failed:",
+        anonymousError?.message
       );
 
       return NextResponse.json(
         {
-          error: error.message,
-        },
-        {
-          status: 401,
-        }
-      );
-    }
+          success: false,
 
-    // ============================================================
-    // VERIFY USER
-    // ============================================================
-
-    if (!data.user || !data.session) {
-      return NextResponse.json(
-        {
           error:
-            "Login was not completed. Please try again.",
+            "Guest checkout is currently unavailable. Please try again later.",
         },
         {
-          status: 401,
+          status: 500,
         }
       );
     }
 
     // ============================================================
-    // RETURN SUCCESS
+    // GUEST LOGIN SUCCESS
     // ============================================================
-
-    /*
-     * Supabase SSR has already written the authentication
-     * cookies through setAll() above.
-     *
-     * Returning the response normally allows those cookies
-     * to remain available to the browser/server.
-     */
 
     return NextResponse.json(
       {
         success: true,
+        guest: true,
 
         user: {
-          id: data.user.id,
-          email: data.user.email,
+          id: anonymousData.user.id,
+          email: anonymousData.user.email ?? null,
+
+          user_metadata:
+            anonymousData.user.user_metadata,
         },
 
         session: {
           access_token:
-            data.session.access_token,
+            anonymousData.session.access_token,
 
           refresh_token:
-            data.session.refresh_token,
+            anonymousData.session.refresh_token,
 
           expires_at:
-            data.session.expires_at,
+            anonymousData.session.expires_at,
 
           expires_in:
-            data.session.expires_in,
+            anonymousData.session.expires_in,
 
           token_type:
-            data.session.token_type,
+            anonymousData.session.token_type,
         },
       },
       {
@@ -172,10 +243,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
+        success: false,
+
         error:
-          error instanceof Error
-            ? error.message
-            : "Unable to process login.",
+          "Unable to process login request.",
       },
       {
         status: 500,
