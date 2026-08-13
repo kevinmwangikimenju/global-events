@@ -4,10 +4,6 @@ import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
   try {
-    // ============================================================
-    // READ LOGIN DATA
-    // ============================================================
-
     const body = await request.json();
 
     const email =
@@ -26,21 +22,11 @@ export async function POST(request: Request) {
           success: false,
           error: "Email and password are required.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
-    // ============================================================
-    // COOKIES
-    // ============================================================
-
     const cookieStore = await cookies();
-
-    // ============================================================
-    // SUPABASE SERVER CLIENT
-    // ============================================================
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -74,22 +60,18 @@ export async function POST(request: Request) {
     );
 
     // ============================================================
-    // TRY NORMAL EMAIL/PASSWORD LOGIN
+    // 1. TRY NORMAL LOGIN
     // ============================================================
 
     const {
       data: loginData,
       error: loginError,
-    } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    // ============================================================
-    // NORMAL USER LOGIN SUCCESS
-    // ============================================================
-
+    // Existing user successfully logged in.
     if (
       !loginError &&
       loginData.user &&
@@ -106,60 +88,41 @@ export async function POST(request: Request) {
             user_metadata:
               loginData.user.user_metadata,
           },
-
-          session: {
-            access_token:
-              loginData.session.access_token,
-
-            refresh_token:
-              loginData.session.refresh_token,
-
-            expires_at:
-              loginData.session.expires_at,
-
-            expires_in:
-              loginData.session.expires_in,
-
-            token_type:
-              loginData.session.token_type,
-          },
         },
-        {
-          status: 200,
-        }
+        { status: 200 }
       );
     }
 
     // ============================================================
-    // NORMAL LOGIN FAILED
+    // 2. PASSWORD LOGIN FAILED
     //
-    // For this application's checkout flow, an unknown email
-    // or password should NOT stop the visitor from buying.
-    //
-    // Instead, create an anonymous Supabase guest session.
+    // For the checkout flow, create an anonymous Supabase
+    // session instead.
     // ============================================================
 
     console.log(
-      "Normal login failed. Creating anonymous guest checkout session."
+      "Password login failed. Attempting anonymous checkout session."
     );
 
+    console.log(
+      "Password login error:",
+      loginError?.message
+    );
+
+    // Clear any existing session before creating the guest one.
+    await supabase.auth.signOut();
+
     // ============================================================
-    // CREATE ANONYMOUS SESSION
+    // 3. CREATE ANONYMOUS USER
     // ============================================================
 
     const {
       data: anonymousData,
       error: anonymousError,
-    } =
-      await supabase.auth.signInAnonymously();
+    } = await supabase.auth.signInAnonymously();
 
     // ============================================================
-    // ANONYMOUS LOGIN FAILED
-    //
-    // TEMPORARY DIAGNOSTIC RESPONSE
-    //
-    // We intentionally return the Supabase error here so we can
-    // identify why production anonymous authentication is failing.
+    // 4. ANONYMOUS LOGIN FAILED
     // ============================================================
 
     if (
@@ -185,16 +148,25 @@ export async function POST(request: Request) {
 
           status:
             anonymousError?.status || null,
+
+          details:
+            anonymousError?.details || null,
+
+          hint:
+            anonymousError?.hint || null,
         },
-        {
-          status: 500,
-        }
+        { status: 500 }
       );
     }
 
     // ============================================================
-    // ANONYMOUS GUEST SESSION SUCCESS
+    // 5. ANONYMOUS LOGIN SUCCESS
     // ============================================================
+
+    console.log(
+      "Anonymous checkout session created:",
+      anonymousData.user.id
+    );
 
     return NextResponse.json(
       {
@@ -203,34 +175,12 @@ export async function POST(request: Request) {
 
         user: {
           id: anonymousData.user.id,
-
-          email:
-            anonymousData.user.email ?? null,
-
+          email: anonymousData.user.email,
           user_metadata:
             anonymousData.user.user_metadata,
         },
-
-        session: {
-          access_token:
-            anonymousData.session.access_token,
-
-          refresh_token:
-            anonymousData.session.refresh_token,
-
-          expires_at:
-            anonymousData.session.expires_at,
-
-          expires_in:
-            anonymousData.session.expires_in,
-
-          token_type:
-            anonymousData.session.token_type,
-        },
       },
-      {
-        status: 200,
-      }
+      { status: 200 }
     );
   } catch (error) {
     console.error(
@@ -247,9 +197,7 @@ export async function POST(request: Request) {
             ? error.message
             : "Unable to process login request.",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
