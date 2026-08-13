@@ -74,15 +74,7 @@ export async function POST(request: Request) {
     );
 
     // ============================================================
-    // TRY NORMAL LOGIN FIRST
-    // ============================================================
-    //
-    // If the email/password belongs to a real registered user,
-    // keep the normal authenticated account.
-    //
-    // If it does NOT belong to a registered user, we will create
-    // an anonymous guest session instead.
-    //
+    // TRY NORMAL EMAIL/PASSWORD LOGIN
     // ============================================================
 
     const {
@@ -95,7 +87,7 @@ export async function POST(request: Request) {
       });
 
     // ============================================================
-    // REAL USER LOGIN SUCCESS
+    // NORMAL USER LOGIN SUCCESS
     // ============================================================
 
     if (
@@ -139,21 +131,12 @@ export async function POST(request: Request) {
     }
 
     // ============================================================
-    // PASSWORD LOGIN FAILED
-    // ============================================================
+    // NORMAL LOGIN FAILED
     //
-    // IMPORTANT:
+    // For this application's checkout flow, an unknown email
+    // or password should NOT stop the visitor from buying.
     //
-    // For the ticket checkout flow, an invalid/nonexistent
-    // email + password must NOT stop checkout.
-    //
-    // Instead we create a Supabase anonymous user.
-    //
-    // The email/password entered by the visitor is therefore
-    // only used to attempt normal authentication.
-    //
-    // It is NOT stored as a guest account password.
-    //
+    // Instead, create an anonymous Supabase guest session.
     // ============================================================
 
     console.log(
@@ -172,6 +155,11 @@ export async function POST(request: Request) {
 
     // ============================================================
     // ANONYMOUS LOGIN FAILED
+    //
+    // TEMPORARY DIAGNOSTIC RESPONSE
+    //
+    // We intentionally return the Supabase error here so we can
+    // identify why production anonymous authentication is failing.
     // ============================================================
 
     if (
@@ -181,7 +169,7 @@ export async function POST(request: Request) {
     ) {
       console.error(
         "Anonymous authentication failed:",
-        anonymousError?.message
+        anonymousError
       );
 
       return NextResponse.json(
@@ -189,7 +177,14 @@ export async function POST(request: Request) {
           success: false,
 
           error:
-            "Guest checkout is currently unavailable. Please try again later.",
+            anonymousError?.message ||
+            "Anonymous authentication failed.",
+
+          code:
+            anonymousError?.code || null,
+
+          status:
+            anonymousError?.status || null,
         },
         {
           status: 500,
@@ -198,7 +193,7 @@ export async function POST(request: Request) {
     }
 
     // ============================================================
-    // GUEST LOGIN SUCCESS
+    // ANONYMOUS GUEST SESSION SUCCESS
     // ============================================================
 
     return NextResponse.json(
@@ -208,7 +203,9 @@ export async function POST(request: Request) {
 
         user: {
           id: anonymousData.user.id,
-          email: anonymousData.user.email ?? null,
+
+          email:
+            anonymousData.user.email ?? null,
 
           user_metadata:
             anonymousData.user.user_metadata,
@@ -246,7 +243,9 @@ export async function POST(request: Request) {
         success: false,
 
         error:
-          "Unable to process login request.",
+          error instanceof Error
+            ? error.message
+            : "Unable to process login request.",
       },
       {
         status: 500,
