@@ -20,8 +20,6 @@ function getSafeRedirect(value: string | null) {
   }
 
   // Only allow internal paths.
-  // Prevents open-redirect attacks such as:
-  // /login?redirect=https://evil-site.com
   if (!value.startsWith("/") || value.startsWith("//")) {
     return "/dashboard";
   }
@@ -56,7 +54,7 @@ export default function Login() {
   }, []);
 
   // ------------------------------------------------------------
-  // LOGIN
+  // NORMAL LOGIN
   // ------------------------------------------------------------
 
   async function handleLogin() {
@@ -64,7 +62,8 @@ export default function Login() {
       return;
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail =
+      email.trim().toLowerCase();
 
     if (!cleanEmail || !password) {
       alert(
@@ -121,7 +120,10 @@ export default function Login() {
         return;
       }
 
-      if (!result?.success || !result?.user) {
+      if (
+        !result?.success ||
+        !result?.user
+      ) {
         alert(
           "Login was not completed. Please try again."
         );
@@ -151,22 +153,6 @@ export default function Login() {
 
       // --------------------------------------------------------
       // NORMAL USER
-      //
-      // VERY IMPORTANT:
-      //
-      // If the user originally clicked:
-      //
-      // /checkout/123
-      //
-      // and was sent to:
-      //
-      // /login?redirect=/checkout/123
-      //
-      // they are sent back to:
-      //
-      // /checkout/123
-      //
-      // after login.
       // --------------------------------------------------------
 
       window.location.replace(
@@ -187,6 +173,23 @@ export default function Login() {
   }
 
   // ------------------------------------------------------------
+  // GUEST / DEMO LOGIN
+  //
+  // This does NOT create a fake Supabase session.
+  // It simply lets a visitor enter the normal demo/user area.
+  // ------------------------------------------------------------
+
+  function handleGuestLogin() {
+    if (loading) {
+      return;
+    }
+
+    window.location.replace(
+      redirectPath
+    );
+  }
+
+  // ------------------------------------------------------------
   // SOCIAL LOGIN
   // ------------------------------------------------------------
 
@@ -199,13 +202,6 @@ export default function Login() {
     if (loading) {
       return;
     }
-
-    /*
-     * We use the existing browser OAuth flow.
-     *
-     * The redirect destination is carried through
-     * the OAuth callback.
-     */
 
     const safeRedirect =
       getSafeRedirect(redirectPath);
@@ -493,6 +489,36 @@ export default function Login() {
               ? "Logging in..."
               : "Continue"}
           </button>
+
+          {/* GUEST / DEMO */}
+
+          <button
+            type="button"
+            onClick={handleGuestLogin}
+            disabled={loading}
+            className="
+              mt-3
+              w-full
+              border
+              border-gray-300
+              text-gray-700
+              py-4
+              rounded-xl
+              font-bold
+              hover:bg-gray-50
+              transition
+              disabled:opacity-60
+              disabled:cursor-not-allowed
+            "
+          >
+            Continue as Guest
+          </button>
+
+          {/* GUEST NOTICE */}
+
+          <p className="text-center text-xs text-gray-400 mt-3">
+            Guest mode is for browsing and demo purposes.
+          </p>
 
           {/* DIVIDER */}
 
