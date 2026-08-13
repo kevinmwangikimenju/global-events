@@ -2,19 +2,26 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+function getSafeRedirect(value: string | null) {
+  if (
+    !value ||
+    !value.startsWith("/") ||
+    value.startsWith("//")
+  ) {
+    return "/dashboard";
+  }
+
+  return value;
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
 
   const code = requestUrl.searchParams.get("code");
 
-  const nextParam =
-    requestUrl.searchParams.get("next");
-
-  const next =
-    nextParam &&
-    nextParam.startsWith("/")
-      ? nextParam
-      : "/dashboard";
+  const next = getSafeRedirect(
+    requestUrl.searchParams.get("next")
+  );
 
   const cookieStore = await cookies();
 
@@ -38,27 +45,19 @@ export async function GET(request: Request) {
                 );
               }
             );
-          } catch {
-            /*
-             * Cookie changes may be handled by
-             * middleware during a server-component
-             * request.
-             */
+          } catch (error) {
+            console.error(
+              "Supabase callback cookie update failed:",
+              error
+            );
           }
         },
       },
     }
   );
 
-  /*
-   * Supabase OAuth returns a temporary authorization
-   * code. Exchange that code for the user's session.
-   */
-
   if (code) {
-    const {
-      error,
-    } =
+    const { error } =
       await supabase.auth.exchangeCodeForSession(
         code
       );
@@ -77,12 +76,6 @@ export async function GET(request: Request) {
       error.message
     );
   }
-
-  /*
-   * If the OAuth callback failed, return the user
-   * to login and preserve the page they originally
-   * wanted to access.
-   */
 
   const loginUrl = new URL(
     "/login",
