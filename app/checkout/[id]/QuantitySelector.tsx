@@ -7,22 +7,22 @@ type QuantitySelectorProps = {
   initialQuantity: number;
   maxQuantity: number;
   eventId: string;
+  ticketPrice: number;
 };
 
 export default function QuantitySelector({
   initialQuantity,
   maxQuantity,
   eventId,
+  ticketPrice,
 }: QuantitySelectorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const safeMax = Math.max(
+  const safeMax =
     Number.isInteger(maxQuantity) && maxQuantity > 0
       ? maxQuantity
-      : 1,
-    1
-  );
+      : 1;
 
   const safeInitial = Math.min(
     Math.max(
@@ -34,6 +34,11 @@ export default function QuantitySelector({
     safeMax
   );
 
+  const safeTicketPrice =
+    Number.isFinite(ticketPrice) && ticketPrice >= 0
+      ? ticketPrice
+      : 0;
+
   const [quantity, setQuantity] = useState(safeInitial);
 
   function updateQuantity(nextQuantity: number) {
@@ -44,7 +49,9 @@ export default function QuantitySelector({
 
     setQuantity(next);
 
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(
+      searchParams.toString()
+    );
 
     params.set("quantity", String(next));
 
@@ -71,7 +78,13 @@ export default function QuantitySelector({
   function handleInputChange(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
-    const value = Number(event.target.value);
+    const rawValue = event.target.value;
+
+    if (rawValue === "") {
+      return;
+    }
+
+    const value = Number(rawValue);
 
     if (!Number.isFinite(value)) {
       return;
@@ -80,8 +93,15 @@ export default function QuantitySelector({
     updateQuantity(value);
   }
 
+  const selectedTotal = safeTicketPrice * quantity;
+
   return (
     <div className="w-full">
+
+      {/* ======================================================
+          QUANTITY CONTROLS
+      ====================================================== */}
+
       <div className="flex items-center gap-4">
 
         {/* DECREASE */}
@@ -171,17 +191,42 @@ export default function QuantitySelector({
 
       </div>
 
-      {/* AVAILABILITY */}
+      {/* ======================================================
+          AVAILABILITY
+      ====================================================== */}
 
       <p className="mt-3 text-sm text-gray-500">
         {safeMax} ticket{safeMax === 1 ? "" : "s"} available
       </p>
 
-      {/* CURRENT SELECTION */}
+      {/* ======================================================
+          CURRENT SELECTION
+      ====================================================== */}
 
       <p className="mt-1 text-sm font-bold text-purple-700">
         {quantity} ticket{quantity === 1 ? "" : "s"} selected
       </p>
+
+      {/* ======================================================
+          SELECTED TOTAL
+      ====================================================== */}
+
+      <div className="mt-4 rounded-xl bg-purple-50 border border-purple-100 px-4 py-3">
+
+        <div className="flex items-center justify-between gap-4">
+
+          <span className="text-sm text-gray-600">
+            Selected total
+          </span>
+
+          <span className="font-black text-purple-700">
+            ${selectedTotal.toFixed(2)}
+          </span>
+
+        </div>
+
+      </div>
+
     </div>
   );
 }
