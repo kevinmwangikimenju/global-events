@@ -4,7 +4,6 @@ export default function Footer() {
   return (
     <footer className="bg-black text-white">
       <div className="max-w-7xl mx-auto px-8 py-16 grid md:grid-cols-4 gap-10">
-        
         {/* Brand */}
         <div>
           <h2 className="text-3xl font-black text-purple-500">
