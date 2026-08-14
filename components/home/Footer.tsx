@@ -64,10 +64,7 @@ export default function Footer() {
 
             <p>support@tixel.com</p>
 
-            <p>+254 700 000 000</p>
-
-            <p>Nairobi, Kenya</p>
-
+          
           </div>
 
         </div>
