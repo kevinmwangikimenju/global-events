@@ -39,15 +39,9 @@ export async function POST(request: Request) {
 
           setAll(cookiesToSet) {
             try {
-              cookiesToSet.forEach(
-                ({ name, value, options }) => {
-                  cookieStore.set(
-                    name,
-                    value,
-                    options
-                  );
-                }
-              );
+              cookiesToSet.forEach(({ name, value, options }) => {
+                cookieStore.set(name, value, options);
+              });
             } catch (error) {
               console.error(
                 "Supabase cookie update failed:",
@@ -95,9 +89,6 @@ export async function POST(request: Request) {
 
     // ============================================================
     // 2. PASSWORD LOGIN FAILED
-    //
-    // For the checkout flow, create an anonymous Supabase
-    // session instead.
     // ============================================================
 
     console.log(
@@ -109,7 +100,7 @@ export async function POST(request: Request) {
       loginError?.message
     );
 
-    // Clear any existing session before creating the guest one.
+    // Clear any existing session before creating the guest session.
     await supabase.auth.signOut();
 
     // ============================================================
@@ -148,12 +139,6 @@ export async function POST(request: Request) {
 
           status:
             anonymousError?.status || null,
-
-          details:
-            anonymousError?.details || null,
-
-          hint:
-            anonymousError?.hint || null,
         },
         { status: 500 }
       );
