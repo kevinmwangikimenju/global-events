@@ -3,74 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-function TixelLogo() {
-  return (
-    <div className="flex items-center gap-2">
-      {/* Tixel ticket logo */}
-      <svg
-        width="30"
-        height="30"
-        viewBox="0 0 40 40"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect
-          x="4"
-          y="8"
-          width="32"
-          height="24"
-          rx="5"
-          fill="black"
-        />
-
-        <path
-          d="M13 8V13"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-
-        <path
-          d="M13 27V32"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-
-        <path
-          d="M27 8V13"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-
-        <path
-          d="M27 27V32"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-
-        <path
-          d="M14 20H26"
-          stroke="white"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-      </svg>
-
-      <div>
-        <div className="text-xl font-black tracking-tight text-black">
-          tixel
-        </div>
-
-        <div className="text-[8px] text-gray-500 font-medium -mt-1">
-          Global Ticket Marketplace
-        </div>
-      </div>
-    </div>
-  );
-}
+import Logo from "@/components/Logo";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -80,10 +13,12 @@ export default function Navbar() {
       <div className="bg-white/95 backdrop-blur-xl border-b border-gray-200 shadow-lg">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[76px] flex items-center justify-between">
 
-          <Link href="/" className="shrink-0">
-            <TixelLogo />
-          </Link>
+          {/* TIXEL LOGO */}
+          <div className="shrink-0">
+            <Logo />
+          </div>
 
+          {/* DESKTOP NAVIGATION */}
           <nav className="hidden md:flex items-center gap-8">
 
             <Link
@@ -123,6 +58,7 @@ export default function Navbar() {
 
           </nav>
 
+          {/* DESKTOP ACTIONS */}
           <div className="hidden md:flex items-center gap-3">
 
             <Link
@@ -167,9 +103,13 @@ export default function Navbar() {
 
           </div>
 
+          {/* MOBILE MENU BUTTON */}
           <button
+            type="button"
             onClick={() => setOpen(!open)}
             className="md:hidden p-3 rounded-xl bg-black text-white"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
           >
             <svg
               width="22"
@@ -179,16 +119,26 @@ export default function Navbar() {
               stroke="currentColor"
               strokeWidth="2"
             >
-              <path d="M4 6H20" />
-              <path d="M4 12H20" />
-              <path d="M4 18H20" />
+              {open ? (
+                <>
+                  <path d="M6 6L18 18" />
+                  <path d="M18 6L6 18" />
+                </>
+              ) : (
+                <>
+                  <path d="M4 6H20" />
+                  <path d="M4 12H20" />
+                  <path d="M4 18H20" />
+                </>
+              )}
             </svg>
           </button>
 
         </div>
 
+        {/* MOBILE NAVIGATION */}
         {open && (
-          <div className="md:hidden bg-white border-t px-6 py-5 space-y-4">
+          <div className="md:hidden bg-white border-t border-gray-200 px-6 py-5 space-y-4">
 
             <Link
               href="/#events"
@@ -215,8 +165,25 @@ export default function Navbar() {
             </Link>
 
             <Link
+              href="/#about"
+              className="block font-bold"
+              onClick={() => setOpen(false)}
+            >
+              About
+            </Link>
+
+            <Link
+              href="/#contact"
+              className="block font-bold"
+              onClick={() => setOpen(false)}
+            >
+              Contact
+            </Link>
+
+            <Link
               href="/login"
               className="block font-bold"
+              onClick={() => setOpen(false)}
             >
               Login
             </Link>
@@ -234,6 +201,7 @@ export default function Navbar() {
                 rounded-xl
                 font-bold
               "
+              onClick={() => setOpen(false)}
             >
               Sign Up
             </Link>

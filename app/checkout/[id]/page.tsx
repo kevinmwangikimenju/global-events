@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
@@ -26,13 +27,10 @@ export default async function CheckoutPage({
   // QUANTITY FROM URL
   // ============================================================
 
-  const parsedQuantity = Number(
-    query.quantity
-  );
+  const parsedQuantity = Number(query.quantity);
 
   const requestedQuantity =
-    Number.isInteger(parsedQuantity) &&
-    parsedQuantity > 0
+    Number.isInteger(parsedQuantity) && parsedQuantity > 0
       ? parsedQuantity
       : 1;
 
@@ -53,15 +51,9 @@ export default async function CheckoutPage({
 
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(
-              ({ name, value, options }) => {
-                cookieStore.set(
-                  name,
-                  value,
-                  options
-                );
-              }
-            );
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
           } catch {
             // Middleware handles cookie updates.
           }
@@ -90,9 +82,8 @@ export default async function CheckoutPage({
   if (eventError || !event) {
     return (
       <main className="min-h-screen bg-gray-100 flex items-center justify-center px-6">
-        <div className="bg-white rounded-3xl shadow-xl p-10 text-center max-w-md">
-
-          <h1 className="text-3xl font-black">
+        <div className="bg-white rounded-3xl shadow-xl p-10 text-center max-w-md w-full">
+          <h1 className="text-3xl font-black text-gray-900">
             Event Not Found
           </h1>
 
@@ -111,11 +102,12 @@ export default async function CheckoutPage({
               py-3
               rounded-xl
               font-bold
+              hover:bg-purple-800
+              transition
             "
           >
             Back Home
           </Link>
-
         </div>
       </main>
     );
@@ -126,9 +118,7 @@ export default async function CheckoutPage({
   // ============================================================
 
   const {
-    data: {
-      user,
-    },
+    data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
@@ -139,9 +129,7 @@ export default async function CheckoutPage({
       )}`;
 
     redirect(
-      `/login?redirect=${encodeURIComponent(
-        checkoutPath
-      )}`
+      `/login?redirect=${encodeURIComponent(checkoutPath)}`
     );
   }
 
@@ -149,12 +137,10 @@ export default async function CheckoutPage({
   // TICKETS REMAINING
   // ============================================================
 
-  const ticketsRemaining =
-    Number(event.tickets_remaining);
+  const ticketsRemaining = Number(event.tickets_remaining);
 
   const safeTicketsRemaining =
-    Number.isFinite(ticketsRemaining) &&
-    ticketsRemaining > 0
+    Number.isFinite(ticketsRemaining) && ticketsRemaining > 0
       ? Math.floor(ticketsRemaining)
       : 1;
 
@@ -171,11 +157,9 @@ export default async function CheckoutPage({
   // PRICE
   // ============================================================
 
-  const ticketPrice =
-    Number(event.ticket_price) || 0;
+  const ticketPrice = Number(event.ticket_price) || 0;
 
-  const total =
-    ticketPrice * quantity;
+  const total = ticketPrice * quantity;
 
   // ============================================================
   // CHECKOUT PAGE
@@ -184,20 +168,47 @@ export default async function CheckoutPage({
   return (
     <main className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-100">
 
-      {/* ====================================================== */}
-      {/* HEADER */}
-      {/* ====================================================== */}
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
 
-      <header className="bg-white shadow">
-
+      <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5 flex items-center justify-between">
+
+          {/* TIXEL LOGO */}
 
           <Link
             href="/"
-            className="text-3xl font-black text-black"
+            className="flex items-center gap-3 group shrink-0"
           >
-            tixel
+            <div className="relative w-12 h-12 flex-shrink-0">
+              <Image
+                src="/tixel-logo.png"
+                alt="Tixel"
+                fill
+                priority
+                sizes="48px"
+                className="
+                  object-contain
+                  group-hover:scale-105
+                  transition-transform
+                  duration-200
+                "
+              />
+            </div>
+
+            <div className="leading-none">
+              <div className="text-black text-xl font-black tracking-tight">
+                tixel
+              </div>
+
+              <div className="text-[9px] text-gray-500 mt-1 tracking-wide">
+                Global Events Marketplace
+              </div>
+            </div>
           </Link>
+
+          {/* BACK TO EVENT */}
 
           <Link
             href={`/events/${event.id}`}
@@ -205,221 +216,183 @@ export default async function CheckoutPage({
               font-bold
               text-purple-700
               hover:text-purple-900
+              transition
             "
           >
             ← Back to Event
           </Link>
 
         </div>
-
       </header>
 
-      {/* ====================================================== */}
-      {/* CONTENT */}
-      {/* ====================================================== */}
+      {/* ======================================================
+          CHECKOUT CONTENT
+      ====================================================== */}
 
-      <div className="max-w-6xl mx-auto px-6 py-16">
+      <section className="max-w-5xl mx-auto px-6 py-12">
+        <div className="grid lg:grid-cols-2 gap-8">
 
-        <div className="grid lg:grid-cols-3 gap-8">
+          {/* ==================================================
+              EVENT DETAILS
+          ================================================== */}
 
-          {/* ================================================== */}
-          {/* EVENT */}
-          {/* ================================================== */}
+          <div className="bg-white rounded-3xl shadow-xl p-8">
 
-          <div className="lg:col-span-2 bg-white rounded-3xl shadow-xl overflow-hidden">
+            <p className="text-sm font-bold text-purple-700 uppercase tracking-wide">
+              Your Event
+            </p>
 
-            <img
-              src={
-                event.banner_url ||
-                "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1400&q=85"
-              }
-              alt={
-                event.title || "Event"
-              }
-              className="
-                w-full
-                h-72
-                object-cover
-              "
-            />
+            <h1 className="text-3xl font-black text-gray-900 mt-3">
+              {event.title}
+            </h1>
 
-            <div className="p-8">
+            <div className="mt-6 space-y-3 text-gray-600">
 
-              <h1 className="text-4xl font-black text-gray-900">
-                {event.title}
-              </h1>
-
-              {event.category && (
-                <p className="mt-3 text-purple-700 font-bold">
-                  {event.category}
+              {event.venue && (
+                <p>
+                  <span className="font-bold text-gray-900">
+                    Venue:
+                  </span>{" "}
+                  {event.venue}
                 </p>
               )}
 
-              <div className="mt-7 space-y-5 text-gray-600">
+              {event.city && (
+                <p>
+                  <span className="font-bold text-gray-900">
+                    Location:
+                  </span>{" "}
+                  {event.city}
+                </p>
+              )}
 
-                {/* VENUE */}
+              {event.country && (
+                <p>
+                  <span className="font-bold text-gray-900">
+                    Country:
+                  </span>{" "}
+                  {event.country}
+                </p>
+              )}
 
-                <div>
+              {event.event_date && (
+                <p>
+                  <span className="font-bold text-gray-900">
+                    Date:
+                  </span>{" "}
+                  {event.event_date}
+                </p>
+              )}
 
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-bold">
-                    Venue
-                  </p>
+              {event.event_time && (
+                <p>
+                  <span className="font-bold text-gray-900">
+                    Time:
+                  </span>{" "}
+                  {event.event_time}
+                </p>
+              )}
 
-                  <p className="font-semibold mt-1">
-                    {event.venue ||
-                      "Venue TBA"}
-                  </p>
+            </div>
 
-                </div>
+            <div className="border-t border-gray-200 mt-8 pt-8">
 
-                {/* LOCATION */}
+              <h2 className="text-xl font-black text-gray-900">
+                Ticket Quantity
+              </h2>
 
-                <div>
-
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-bold">
-                    Location
-                  </p>
-
-                  <p className="font-semibold mt-1">
-                    {[
-                      event.city,
-                      event.country,
-                    ]
-                      .filter(Boolean)
-                      .join(", ") ||
-                      "Location TBA"}
-                  </p>
-
-                </div>
-
-                {/* DATE */}
-
-                <div>
-
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-bold">
-                    Date
-                  </p>
-
-                  <p className="font-semibold mt-1">
-                    {event.event_date ||
-                      "Date TBA"}
-                  </p>
-
-                </div>
-
-                {/* TIME */}
-
-                <div>
-
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-bold">
-                    Time
-                  </p>
-
-                  <p className="font-semibold mt-1">
-                    {event.event_time ||
-                      "Time TBA"}
-                  </p>
-
-                </div>
-
+              <div className="mt-5">
+                <QuantitySelector
+                  initialQuantity={quantity}
+                  maxQuantity={safeTicketsRemaining}
+                  eventId={event.id}
+                  ticketPrice={ticketPrice}
+                />
               </div>
 
             </div>
 
           </div>
 
-          {/* ================================================== */}
-          {/* ORDER */}
-          {/* ================================================== */}
+          {/* ==================================================
+              ORDER SUMMARY
+          ================================================== */}
 
-          <div className="bg-white rounded-3xl shadow-xl p-8 h-fit lg:sticky lg:top-24">
+          <div className="bg-white rounded-3xl shadow-xl p-8">
 
-            <h2 className="text-3xl font-black text-gray-900">
-              Your Tickets
+            <h2 className="text-2xl font-black text-gray-900">
+              Order Summary
             </h2>
 
-            <p className="text-gray-500 mt-2">
-              Choose how many tickets you want.
-            </p>
+            <div className="mt-8 space-y-5">
 
-            {/* ================================================= */}
-            {/* PRICE */}
-            {/* ================================================= */}
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-600">
+                  Ticket price
+                </span>
 
-            <div className="border-t border-gray-200 my-7" />
+                <span className="font-bold text-gray-900">
+                  {ticketPrice.toLocaleString()}
+                </span>
+              </div>
 
-            <div className="flex justify-between">
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-600">
+                  Quantity
+                </span>
 
-              <span className="text-gray-600">
-                Price per ticket
-              </span>
+                <span className="font-bold text-gray-900">
+                  {quantity}
+                </span>
+              </div>
 
-              <strong>
-                ${ticketPrice.toFixed(2)}
-              </strong>
+              <div className="border-t border-gray-200 pt-5 flex justify-between gap-4">
 
-            </div>
-
-            {/* ================================================= */}
-            {/* AVAILABILITY */}
-            {/* ================================================= */}
-
-            <div className="flex justify-between mt-4">
-
-              <span className="text-gray-600">
-                Tickets available
-              </span>
-
-              <strong>
-                {safeTicketsRemaining}
-              </strong>
-
-            </div>
-
-            {/* ================================================= */}
-            {/* QUANTITY SELECTOR */}
-            {/* ================================================= */}
-
-            <div className="border-t border-gray-200 my-7 pt-7">
-
-              <QuantitySelector
-                eventId={event.id}
-                ticketPrice={ticketPrice}
-                ticketsRemaining={
-                  safeTicketsRemaining
-                }
-                initialQuantity={
-                  quantity
-                }
-              />
-
-            </div>
-
-            {/* ================================================= */}
-            {/* CURRENT TOTAL */}
-            {/* ================================================= */}
-
-            <div className="mt-6 bg-purple-50 border border-purple-100 rounded-2xl p-5">
-
-              <div className="flex justify-between items-center">
-
-                <span className="font-bold text-gray-700">
-                  Current total
+                <span className="text-xl font-black text-gray-900">
+                  Total
                 </span>
 
                 <span className="text-2xl font-black text-purple-700">
-                  ${total.toFixed(2)}
+                  {total.toLocaleString()}
                 </span>
 
               </div>
 
             </div>
+
+            {/* CONTINUE TO PAYMENT */}
+
+            <Link
+              href={`/payment?event=${encodeURIComponent(
+                event.id
+              )}&quantity=${encodeURIComponent(
+                String(quantity)
+              )}`}
+              className="
+                block
+                w-full
+                mt-8
+                text-center
+                bg-gradient-to-r
+                from-orange-500
+                via-pink-500
+                to-purple-700
+                text-white
+                py-4
+                rounded-2xl
+                font-black
+                shadow-lg
+                hover:scale-[1.02]
+                transition
+              "
+            >
+              Continue to Payment
+            </Link>
 
           </div>
 
         </div>
-
-      </div>
+      </section>
 
     </main>
   );

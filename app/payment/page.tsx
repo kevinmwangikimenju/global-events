@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
@@ -22,8 +23,7 @@ export default async function PaymentPage({
   const parsedQuantity = Number(params.quantity);
 
   const quantity =
-    Number.isInteger(parsedQuantity) &&
-    parsedQuantity > 0
+    Number.isInteger(parsedQuantity) && parsedQuantity > 0
       ? parsedQuantity
       : 1;
 
@@ -45,7 +45,7 @@ export default async function PaymentPage({
 
           <Link
             href="/"
-            className="inline-block mt-8 bg-purple-700 text-white px-8 py-4 rounded-xl font-bold"
+            className="inline-block mt-8 bg-purple-700 text-white px-8 py-4 rounded-xl font-bold hover:bg-purple-800 transition"
           >
             Back Home
           </Link>
@@ -55,7 +55,7 @@ export default async function PaymentPage({
   }
 
   // ============================================================
-  // SERVER SUPABASE CLIENT
+  // SUPABASE SERVER CLIENT
   // ============================================================
 
   const cookieStore = await cookies();
@@ -71,15 +71,9 @@ export default async function PaymentPage({
 
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(
-              ({ name, value, options }) => {
-                cookieStore.set(
-                  name,
-                  value,
-                  options
-                );
-              }
-            );
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
           } catch {
             // Middleware handles cookie updates.
           }
@@ -89,7 +83,7 @@ export default async function PaymentPage({
   );
 
   // ============================================================
-  // CHECK USER
+  // CHECK AUTHENTICATION
   // ============================================================
 
   const {
@@ -99,15 +93,14 @@ export default async function PaymentPage({
 
   if (userError || !user) {
     const destination =
-      `/payment?event=${encodeURIComponent(eventId)}` +
-      `&quantity=${encodeURIComponent(
-        String(quantity)
-      )}`;
+      "/payment?event=" +
+      encodeURIComponent(eventId) +
+      "&quantity=" +
+      encodeURIComponent(String(quantity));
 
     redirect(
-      `/login?redirect=${encodeURIComponent(
-        destination
-      )}`
+      "/login?redirect=" +
+        encodeURIComponent(destination)
     );
   }
 
@@ -124,6 +117,10 @@ export default async function PaymentPage({
     .eq("id", eventId)
     .single();
 
+  // ============================================================
+  // EVENT NOT FOUND
+  // ============================================================
+
   if (eventError || !event) {
     return (
       <main className="min-h-screen bg-gray-100 flex items-center justify-center px-6">
@@ -133,13 +130,13 @@ export default async function PaymentPage({
           </h1>
 
           <p className="text-gray-600 mt-4">
-            The event connected to this payment could not
-            be found.
+            The event connected to this payment could not be
+            found.
           </p>
 
           <Link
             href="/"
-            className="inline-block mt-8 bg-purple-700 text-white px-8 py-4 rounded-xl font-bold"
+            className="inline-block mt-8 bg-purple-700 text-white px-8 py-4 rounded-xl font-bold hover:bg-purple-800 transition"
           >
             Back Home
           </Link>
@@ -149,17 +146,40 @@ export default async function PaymentPage({
   }
 
   // ============================================================
-  // CALCULATE TOTAL
+  // TICKETS REMAINING
+  // ============================================================
+
+  const ticketsRemaining = Number(
+    event.tickets_remaining
+  );
+
+  const safeTicketsRemaining =
+    Number.isFinite(ticketsRemaining) &&
+    ticketsRemaining > 0
+      ? Math.floor(ticketsRemaining)
+      : 1;
+
+  // ============================================================
+  // SAFE QUANTITY
+  // ============================================================
+
+  const safeQuantity = Math.min(
+    Math.max(quantity, 1),
+    safeTicketsRemaining
+  );
+
+  // ============================================================
+  // PRICE
   // ============================================================
 
   const ticketPrice =
     Number(event.ticket_price) || 0;
 
   const total =
-    ticketPrice * quantity;
+    ticketPrice * safeQuantity;
 
   // ============================================================
-  // LOAD ALL ACTIVE BANKS
+  // LOAD ACTIVE BANKS
   // ============================================================
 
   const {
@@ -182,49 +202,91 @@ export default async function PaymentPage({
   return (
     <main className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-100">
 
-      {/* ====================================================== */}
-      {/* HEADER */}
-      {/* ====================================================== */}
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
 
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5 flex items-center justify-between">
 
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+          {/* TIXEL LOGO */}
 
           <Link
             href="/"
-            className="text-3xl font-black text-black"
+            className="flex items-center gap-3 group shrink-0"
           >
-            tixel
+            <div className="relative w-12 h-12 flex-shrink-0">
+              <Image
+                src="/tixel-logo.png"
+                alt="Tixel"
+                fill
+                priority
+                sizes="48px"
+                className="
+                  object-contain
+                  group-hover:scale-105
+                  transition-transform
+                  duration-200
+                "
+              />
+            </div>
+
+            <div className="leading-none">
+              <div className="text-black text-xl font-black tracking-tight">
+                tixel
+              </div>
+
+              <div className="text-[9px] text-gray-500 mt-1 tracking-wide">
+                Global Events Marketplace
+              </div>
+            </div>
           </Link>
 
+          {/* BACK TO CHECKOUT */}
+
           <Link
-            href={`/checkout/${event.id}?quantity=${quantity}`}
-            className="font-bold text-purple-700 hover:text-purple-900"
+            href={
+              "/checkout/" +
+              event.id +
+              "?quantity=" +
+              encodeURIComponent(
+                String(safeQuantity)
+              )
+            }
+            className="
+              font-bold
+              text-purple-700
+              hover:text-purple-900
+              transition
+            "
           >
             ← Back to Checkout
           </Link>
 
         </div>
-
       </header>
 
-      {/* ====================================================== */}
-      {/* CONTENT */}
-      {/* ====================================================== */}
+      {/* ======================================================
+          CONTENT
+      ====================================================== */}
 
-      <div className="max-w-6xl mx-auto px-6 py-12">
+      <section className="max-w-6xl mx-auto px-6 py-12">
 
         <div className="grid lg:grid-cols-3 gap-8">
 
-          {/* ================================================== */}
-          {/* LEFT */}
-          {/* ================================================== */}
+          {/* ==================================================
+              PAYMENT SECTION
+          ================================================== */}
 
-          <section className="lg:col-span-2">
+          <div className="lg:col-span-2">
 
             <div className="bg-white rounded-3xl shadow-xl p-8">
 
-              <h1 className="text-4xl font-black text-gray-900">
+              <p className="text-sm font-bold text-purple-700 uppercase tracking-wide">
+                Payment
+              </p>
+
+              <h1 className="text-4xl font-black text-gray-900 mt-2">
                 Complete Your Payment
               </h1>
 
@@ -233,9 +295,9 @@ export default async function PaymentPage({
                 then upload your payment screenshot.
               </p>
 
-              {/* ================================================= */}
-              {/* EVENT */}
-              {/* ================================================= */}
+              {/* =================================================
+                  EVENT DETAILS
+              ================================================= */}
 
               <div className="mt-8 rounded-2xl bg-purple-50 border border-purple-100 p-6">
 
@@ -243,15 +305,15 @@ export default async function PaymentPage({
                   {event.title}
                 </h2>
 
-                <div className="mt-4 grid sm:grid-cols-2 gap-4 text-gray-600">
+                <div className="mt-5 grid sm:grid-cols-2 gap-5">
 
                   <div>
                     <p className="text-sm text-gray-500">
                       Tickets
                     </p>
 
-                    <p className="font-black text-gray-900">
-                      {quantity}
+                    <p className="font-black text-gray-900 mt-1">
+                      {safeQuantity}
                     </p>
                   </div>
 
@@ -260,7 +322,7 @@ export default async function PaymentPage({
                       Price per ticket
                     </p>
 
-                    <p className="font-black text-gray-900">
+                    <p className="font-black text-gray-900 mt-1">
                       ${ticketPrice.toFixed(2)}
                     </p>
                   </div>
@@ -270,7 +332,7 @@ export default async function PaymentPage({
                       Venue
                     </p>
 
-                    <p className="font-semibold">
+                    <p className="font-semibold text-gray-900 mt-1">
                       {event.venue || "Venue TBA"}
                     </p>
                   </div>
@@ -280,8 +342,11 @@ export default async function PaymentPage({
                       Location
                     </p>
 
-                    <p className="font-semibold">
-                      {[event.city, event.country]
+                    <p className="font-semibold text-gray-900 mt-1">
+                      {[
+                        event.city,
+                        event.country,
+                      ]
                         .filter(Boolean)
                         .join(", ") ||
                         "Location TBA"}
@@ -293,7 +358,7 @@ export default async function PaymentPage({
                       Date
                     </p>
 
-                    <p className="font-semibold">
+                    <p className="font-semibold text-gray-900 mt-1">
                       {event.event_date ||
                         "Date TBA"}
                     </p>
@@ -304,51 +369,56 @@ export default async function PaymentPage({
                       Time
                     </p>
 
-                    <p className="font-semibold">
+                    <p className="font-semibold text-gray-900 mt-1">
                       {event.event_time ||
                         "Time TBA"}
                     </p>
                   </div>
 
                 </div>
+              </div>
+
+              {/* =================================================
+                  PAYMENT FORM
+              ================================================= */}
+
+              <div className="mt-8">
+
+                <PaymentForm
+                  banks={banks || []}
+                  banksError={
+                    banksError?.message || null
+                  }
+                  quantity={safeQuantity}
+                  ticketPrice={ticketPrice}
+                  total={total}
+                  eventId={event.id}
+                />
 
               </div>
 
-              {/* ================================================= */}
-              {/* PAYMENT FORM */}
-              {/* ================================================= */}
-
-              <PaymentForm
-                banks={banks || []}
-                banksError={banksError?.message || null}
-                quantity={quantity}
-                ticketPrice={ticketPrice}
-                total={total}
-                eventId={event.id}
-              />
-
             </div>
 
-          </section>
+          </div>
 
-          {/* ================================================== */}
-          {/* ORDER SUMMARY */}
-          {/* ================================================== */}
+          {/* ==================================================
+              ORDER SUMMARY
+          ================================================== */}
 
           <aside className="bg-white rounded-3xl shadow-xl p-8 h-fit lg:sticky lg:top-8">
 
-            <h2 className="text-2xl font-black">
+            <h2 className="text-2xl font-black text-gray-900">
               Order Summary
             </h2>
 
-            <div className="border-t my-6" />
+            <div className="border-t border-gray-200 my-6" />
 
             <div>
               <p className="text-sm text-gray-500">
                 Event
               </p>
 
-              <p className="font-black mt-1">
+              <p className="font-black text-gray-900 mt-1">
                 {event.title}
               </p>
             </div>
@@ -358,27 +428,27 @@ export default async function PaymentPage({
                 Tickets
               </p>
 
-              <p className="font-black mt-1">
-                {quantity} Ticket
-                {quantity === 1 ? "" : "s"}
+              <p className="font-black text-gray-900 mt-1">
+                {safeQuantity} Ticket
+                {safeQuantity === 1 ? "" : "s"}
               </p>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-5">
               <p className="text-sm text-gray-500">
                 Price per ticket
               </p>
 
-              <p className="font-bold mt-1">
+              <p className="font-bold text-gray-900 mt-1">
                 ${ticketPrice.toFixed(2)}
               </p>
             </div>
 
-            <div className="border-t my-6" />
+            <div className="border-t border-gray-200 my-6" />
 
             <div className="flex justify-between items-center gap-4">
 
-              <span className="font-bold">
+              <span className="font-bold text-gray-900">
                 Total
               </span>
 
@@ -399,14 +469,17 @@ export default async function PaymentPage({
                 <strong>
                   ${total.toFixed(2)}
                 </strong>{" "}
-                for {quantity} ticket
-                {quantity === 1 ? "" : "s"}.
+                for {safeQuantity} ticket
+                {safeQuantity === 1 ? "" : "s"}.
               </p>
 
             </div>
 
             <Link
-              href={`/events/${event.id}`}
+              href={
+                "/events/" +
+                event.id
+              }
               className="
                 block
                 text-center
@@ -414,6 +487,7 @@ export default async function PaymentPage({
                 text-purple-700
                 font-bold
                 hover:text-purple-900
+                transition
               "
             >
               ← Back to Event
@@ -423,7 +497,7 @@ export default async function PaymentPage({
 
         </div>
 
-      </div>
+      </section>
 
     </main>
   );
